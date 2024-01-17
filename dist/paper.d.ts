@@ -7380,7 +7380,7 @@ declare namespace paper {
     }
 }
 
-declare module 'paper'
+declare module '@ambright_dev/paper'
 {
     const paperCore: Pick<paper.PaperScope, Exclude<keyof paper.PaperScope, 'PaperScript'>>;
     export = paperCore
