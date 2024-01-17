@@ -25,7 +25,7 @@ gulp.task('test:node', [], function(callback) {
                 // Note that loading dist/paper-full.js also works in
                 // combination with `gulp load`, in which case Prepro.js is
                 // present and handles the loading transparently.
-                { path: '../dist/paper-core.js', namespace: 'paper' }
+                { path: '../dist/paper.js', namespace: 'paper' }
             ],
             timeout: 40
         }));

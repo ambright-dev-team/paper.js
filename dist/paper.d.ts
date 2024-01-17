@@ -7380,15 +7380,8 @@ declare namespace paper {
     }
 }
 
-
-declare module 'paper/dist/paper-core'
+declare module 'paper'
 {
     const paperCore: Pick<paper.PaperScope, Exclude<keyof paper.PaperScope, 'PaperScript'>>;
     export = paperCore
-}
-
-declare module 'paper'
-{
-    const paperFull: paper.PaperScope;
-    export = paperFull
 }

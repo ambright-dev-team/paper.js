@@ -21,7 +21,6 @@ var gulp = require('gulp'),
 // Options to be used in Prepro.js preprocessing through the global __options
 // object, merged in with the options required above.
 var buildOptions = {
-    full: { paperScript: true },
     core: { paperScript: false }
 };
 
@@ -60,9 +59,6 @@ buildNames.forEach(function(name) {
             .pipe(whitespace({
                 spacesToTabs: 4,
                 removeTrailing: true
-            }))
-            .pipe(rename({
-                suffix: '-' + name
             }))
             .pipe(gulp.dest('dist'));
     });
