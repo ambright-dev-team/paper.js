@@ -7389,6 +7389,6 @@ declare module '@ambright_dev/paper'
 
 declare module 'paper'
 {
-    const paperFull: paper.PaperScope;
-    export = paperFull
+    const paperCore: Pick<paper.PaperScope, Exclude<keyof paper.PaperScope, 'PaperScript'>>;
+    export = paperCore
 }
