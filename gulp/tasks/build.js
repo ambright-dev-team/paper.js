@@ -21,7 +21,7 @@ var gulp = require('gulp'),
 // Options to be used in Prepro.js preprocessing through the global __options
 // object, merged in with the options required above.
 var buildOptions = {
-    full: { paperScript: true },
+    full: { paperScript: false },
     core: { paperScript: false }
 };
 
