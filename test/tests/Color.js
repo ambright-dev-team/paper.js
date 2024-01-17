@@ -12,7 +12,7 @@
 
 QUnit.module('Color');
 
-test('Set named color', function() {
+QUnit.test('Set named color', function() {
     var path = new Path();
     path.fillColor = 'red';
     equals(path.fillColor, new Color(1, 0, 0));
@@ -69,10 +69,10 @@ test('Creating Colors', function() {
     equals(new Color('#FF3300'), new Color(1, 0.2, 0),
             'Color from uppercase hex string');
 
-    equals(new Color('#f009'), new Color(1, 0, 0, .6),
+    equals(new Color('#f009'), new Color(1, 0, 0, 0.6),
         'Color from 4 characters hex code with alpha');
 
-    equals(new Color('#ff000099'), new Color(1, 0, 0, .6),
+    equals(new Color('#ff000099'), new Color(1, 0, 0, 0.6),
         'Color from 8 characters hex code with alpha');
 
     equals(new Color('rgb(255, 0, 0)'), new Color(1, 0, 0),
@@ -280,7 +280,7 @@ test('Gradients with applyMatrix', function() {
         },
         origin: topLeft,
         destination: bottomRight
-    }
+    };
 
     var path = new Path.Rectangle({
         topLeft: topLeft,

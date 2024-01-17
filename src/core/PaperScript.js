@@ -29,7 +29,7 @@ Base.exports.PaperScript = function() {
         // assigned to it and ends up in the local acorn object.
         var exports, module;
         acorn = exports = module = {};
-/*#*/ include('../../node_modules/acorn/acorn.js', { exports: false });
+/*#*/ include('../../node_modules/acorn/dist/acorn.js', { exports: false });
         // Clear object again if it wasn't loaded here; for load.js, see below.
         if (!acorn.version)
             acorn = null;

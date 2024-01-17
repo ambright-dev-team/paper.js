@@ -37,6 +37,9 @@ var paper = function(self, undefined) {
 // Inline Straps.js core (the Base class) inside the paper scope first:
 /*#*/ include('../node_modules/straps/straps.js');
 
+/*#*/ include('canvas/BlendMode.js');
+/*#*/ include('canvas/CanvasProvider.js');
+
 /*#*/ include('core/Base.js');
 /*#*/ include('core/Emitter.js');
 /*#*/ include('core/PaperScope.js');
@@ -107,8 +110,6 @@ var paper = function(self, undefined) {
 
 /*#*/ include('net/Http.js');
 
-/*#*/ include('canvas/CanvasProvider.js');
-/*#*/ include('canvas/BlendMode.js');
 /*#*/ if (__options.load) {
 /*#*/     include('canvas/ProxyContext.js');
 /*#*/ }

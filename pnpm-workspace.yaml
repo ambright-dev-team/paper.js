@@ -1,0 +1,3 @@
+packages:
+  - 'packages/paper-jsdom'
+  - 'packages/paper-jsdom-canvas'

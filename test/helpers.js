@@ -1,14 +1,4 @@
-/*
- * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
- * http://paperjs.org/
- *
- * Copyright (c) 2011 - 2020, Jürg Lehni & Jonathan Puckey
- * http://juerglehni.com/ & https://puckey.studio/
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
+// import paper from "d"
 
 // We call our variable `isNodeContext` because resemble.js exposes a global
 // `isNode` function which would override it and break node check.
@@ -212,7 +202,7 @@ var compareImageData = function(imageData1, imageData2, tolerance, message, desc
                 result = data;
             }
         }
-    )
+    );
     // Compare with tolerance in percentage...
     var fixed = tolerance < 1 ? ((1 / tolerance) + '').length - 1 : 0,
         identical = result ? 100 - result.misMatchPercentage : 0,

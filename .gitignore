@@ -1,4 +1,4 @@
-/node_modules/
+node_modules
 /dist/*/
 /dist/*.min.js
 /dist/paperjs.zip
@@ -11,3 +11,4 @@
 !.yarn/sdks
 !.yarn/versions
 .pnp.js
+.idea
