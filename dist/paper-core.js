@@ -232,6 +232,54 @@ var Base = new function() {
 if (typeof module !== 'undefined')
 	module.exports = Base;
 
+var CanvasProvider = Base.exports.CanvasProvider = {
+    canvases: [],
+
+    getCanvas: function(width, height, options) {
+        if (!window)
+            return null;
+        var canvas,
+            clear = true;
+        if (typeof width === 'object') {
+            height = width.height;
+            width = width.width;
+        }
+        if (this.canvases.length) {
+            canvas = this.canvases.pop();
+        } else {
+            canvas = document.createElement('canvas');
+            clear = false;
+        }
+        var ctx = canvas.getContext('2d', options || {});
+        if (!ctx) {
+            throw new Error('Canvas ' + canvas +
+                ' is unable to provide a 2D context.');
+        }
+        if (canvas.width === width && canvas.height === height) {
+            if (clear)
+                ctx.clearRect(0, 0, width + 1, height + 1);
+        } else {
+            canvas.width = width;
+            canvas.height = height;
+        }
+        ctx.save();
+        return canvas;
+    },
+
+    getContext: function(width, height, options) {
+        var canvas = this.getCanvas(width, height, options);
+        return canvas ? canvas.getContext('2d', options || {}) : null;
+    },
+
+    release: function(obj) {
+        var canvas = obj && obj.canvas ? obj.canvas : obj;
+        if (canvas && canvas.getContext) {
+            canvas.getContext('2d').restore();
+            this.canvases.push(canvas);
+        }
+    }
+};
+
 var BlendMode = new function() {
 	var min = Math.min,
 		max = Math.max,
@@ -483,53 +531,36 @@ var BlendMode = new function() {
 	};
 };
 
-var CanvasProvider = Base.exports.CanvasProvider = {
-	canvases: [],
+var Formatter = Base.extend({
+    initialize: function(precision) {
+        this.precision = Base.pick(precision, 5);
+        this.multiplier = Math.pow(10, this.precision);
+    },
 
-	getCanvas: function(width, height, options) {
-		if (!window)
-			return null;
-		var canvas,
-			clear = true;
-		if (typeof width === 'object') {
-			height = width.height;
-			width = width.width;
-		}
-		if (this.canvases.length) {
-			canvas = this.canvases.pop();
-		} else {
-			canvas = document.createElement('canvas');
-			clear = false;
-		}
-		var ctx = canvas.getContext('2d', options || {});
-		if (!ctx) {
-			throw new Error('Canvas ' + canvas +
-					' is unable to provide a 2D context.');
-		}
-		if (canvas.width === width && canvas.height === height) {
-			if (clear)
-				ctx.clearRect(0, 0, width + 1, height + 1);
-		} else {
-			canvas.width = width;
-			canvas.height = height;
-		}
-		ctx.save();
-		return canvas;
-	},
+    number: function(val) {
+        return this.precision < 16
+            ? Math.round(val * this.multiplier) / this.multiplier : val;
+    },
 
-	getContext: function(width, height, options) {
-		var canvas = this.getCanvas(width, height, options);
-		return canvas ? canvas.getContext('2d', options || {}) : null;
-	},
+    pair: function(val1, val2, separator) {
+        return this.number(val1) + (separator || ',') + this.number(val2);
+    },
 
-	release: function(obj) {
-		var canvas = obj && obj.canvas ? obj.canvas : obj;
-		if (canvas && canvas.getContext) {
-			canvas.getContext('2d').restore();
-			this.canvases.push(canvas);
-		}
-	}
-};
+    point: function(val, separator) {
+        return this.number(val.x) + (separator || ',') + this.number(val.y);
+    },
+
+    size: function(val, separator) {
+        return this.number(val.width) + (separator || ',')
+            + this.number(val.height);
+    },
+
+    rectangle: function(val, separator) {
+        return this.point(val, separator) + (separator || ',')
+            + this.size(val, separator);
+    }
+});
+Formatter.instance = new Formatter();
 
 Base.inject({
 	enumerable: false,
@@ -1396,38 +1427,6 @@ var CollisionDetection = {
 	}
 };
 
-var Formatter = Base.extend({
-	initialize: function(precision) {
-		this.precision = Base.pick(precision, 5);
-		this.multiplier = Math.pow(10, this.precision);
-	},
-
-	number: function(val) {
-		return this.precision < 16
-				? Math.round(val * this.multiplier) / this.multiplier : val;
-	},
-
-	pair: function(val1, val2, separator) {
-		return this.number(val1) + (separator || ',') + this.number(val2);
-	},
-
-	point: function(val, separator) {
-		return this.number(val.x) + (separator || ',') + this.number(val.y);
-	},
-
-	size: function(val, separator) {
-		return this.number(val.width) + (separator || ',')
-				+ this.number(val.height);
-	},
-
-	rectangle: function(val, separator) {
-		return this.point(val, separator) + (separator || ',')
-				+ this.size(val, separator);
-	}
-});
-
-Formatter.instance = new Formatter();
-
 var Numerical = new function() {
 
 	var abscissas = [
@@ -1989,6 +1988,360 @@ var Point = Base.extend({
 	};
 }, {}));
 
+var Rectangle = Base.extend({
+    _class: 'Rectangle',
+    _readIndex: true,
+    beans: true,
+
+    initialize: function Rectangle(arg0, arg1, arg2, arg3) {
+        var args = arguments,
+            type = typeof arg0,
+            read;
+        if (type === 'number') {
+            this._set(arg0, arg1, arg2, arg3);
+            read = 4;
+        } else if (type === 'undefined' || arg0 === null) {
+            this._set(0, 0, 0, 0);
+            read = arg0 === null ? 1 : 0;
+        } else if (args.length === 1) {
+            if (Array.isArray(arg0)) {
+                this._set.apply(this, arg0);
+                read = 1;
+            } else if (arg0.x !== undefined || arg0.width !== undefined) {
+                this._set(arg0.x || 0, arg0.y || 0,
+                    arg0.width || 0, arg0.height || 0);
+                read = 1;
+            } else if (arg0.from === undefined && arg0.to === undefined) {
+                this._set(0, 0, 0, 0);
+                if (Base.readSupported(args, this)) {
+                    read = 1;
+                }
+            }
+        }
+        if (read === undefined) {
+            var frm = Point.readNamed(args, 'from'),
+                next = Base.peek(args),
+                x = frm.x,
+                y = frm.y,
+                width,
+                height;
+            if (next && next.x !== undefined || Base.hasNamed(args, 'to')) {
+                var to = Point.readNamed(args, 'to');
+                width = to.x - x;
+                height = to.y - y;
+                if (width < 0) {
+                    x = to.x;
+                    width = -width;
+                }
+                if (height < 0) {
+                    y = to.y;
+                    height = -height;
+                }
+            } else {
+                var size = Size.read(args);
+                width = size.width;
+                height = size.height;
+            }
+            this._set(x, y, width, height);
+            read = args.__index;
+        }
+        var filtered = args.__filtered;
+        if (filtered)
+            this.__filtered = filtered;
+        if (this.__read)
+            this.__read = read;
+        return this;
+    },
+
+    set: '#initialize',
+
+    _set: function(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        return this;
+    },
+
+    clone: function() {
+        return new Rectangle(this.x, this.y, this.width, this.height);
+    },
+
+    equals: function(rect) {
+        var rt = Base.isPlainValue(rect)
+            ? Rectangle.read(arguments)
+            : rect;
+        return rt === this
+            || rt && this.x === rt.x && this.y === rt.y
+            && this.width === rt.width && this.height === rt.height
+            || false;
+    },
+
+    toString: function() {
+        var f = Formatter.instance;
+        return '{ x: ' + f.number(this.x)
+            + ', y: ' + f.number(this.y)
+            + ', width: ' + f.number(this.width)
+            + ', height: ' + f.number(this.height)
+            + ' }';
+    },
+
+    _serialize: function(options) {
+        var f = options.formatter;
+        return [f.number(this.x),
+            f.number(this.y),
+            f.number(this.width),
+            f.number(this.height)];
+    },
+
+    getPoint: function(_dontLink) {
+        var ctor = _dontLink ? Point : LinkedPoint;
+        return new ctor(this.x, this.y, this, 'setPoint');
+    },
+
+    setPoint: function() {
+        var point = Point.read(arguments);
+        this.x = point.x;
+        this.y = point.y;
+    },
+
+    getSize: function(_dontLink) {
+        var ctor = _dontLink ? Size : LinkedSize;
+        return new ctor(this.width, this.height, this, 'setSize');
+    },
+
+    _fw: 1,
+    _fh: 1,
+
+    setSize: function() {
+        var size = Size.read(arguments),
+            sx = this._sx,
+            sy = this._sy,
+            w = size.width,
+            h = size.height;
+        if (sx) {
+            this.x += (this.width - w) * sx;
+        }
+        if (sy) {
+            this.y += (this.height - h) * sy;
+        }
+        this.width = w;
+        this.height = h;
+        this._fw = this._fh = 1;
+    },
+
+    getLeft: function() {
+        return this.x;
+    },
+
+    setLeft: function(left) {
+        if (!this._fw) {
+            var amount = left - this.x;
+            this.width -= this._sx === 0.5 ? amount * 2 : amount;
+        }
+        this.x = left;
+        this._sx = this._fw = 0;
+    },
+
+    getTop: function() {
+        return this.y;
+    },
+
+    setTop: function(top) {
+        if (!this._fh) {
+            var amount = top - this.y;
+            this.height -= this._sy === 0.5 ? amount * 2 : amount;
+        }
+        this.y = top;
+        this._sy = this._fh = 0;
+    },
+
+    getRight: function() {
+        return this.x + this.width;
+    },
+
+    setRight: function(right) {
+        if (!this._fw) {
+            var amount = right - this.x;
+            this.width = this._sx === 0.5 ? amount * 2 : amount;
+        }
+        this.x = right - this.width;
+        this._sx = 1;
+        this._fw = 0;
+    },
+
+    getBottom: function() {
+        return this.y + this.height;
+    },
+
+    setBottom: function(bottom) {
+        if (!this._fh) {
+            var amount = bottom - this.y;
+            this.height = this._sy === 0.5 ? amount * 2 : amount;
+        }
+        this.y = bottom - this.height;
+        this._sy = 1;
+        this._fh = 0;
+    },
+
+    getCenterX: function() {
+        return this.x + this.width / 2;
+    },
+
+    setCenterX: function(x) {
+        if (this._fw || this._sx === 0.5) {
+            this.x = x - this.width / 2;
+        } else {
+            if (this._sx) {
+                this.x += (x - this.x) * 2 * this._sx;
+            }
+            this.width = (x - this.x) * 2;
+        }
+        this._sx = 0.5;
+        this._fw = 0;
+    },
+
+    getCenterY: function() {
+        return this.y + this.height / 2;
+    },
+
+    setCenterY: function(y) {
+        if (this._fh || this._sy === 0.5) {
+            this.y = y - this.height / 2;
+        } else {
+            if (this._sy) {
+                this.y += (y - this.y) * 2 * this._sy;
+            }
+            this.height = (y - this.y) * 2;
+        }
+        this._sy = 0.5;
+        this._fh = 0;
+    },
+
+    getCenter: function(_dontLink) {
+        var ctor = _dontLink ? Point : LinkedPoint;
+        return new ctor(this.getCenterX(), this.getCenterY(), this, 'setCenter');
+    },
+
+    setCenter: function() {
+        var point = Point.read(arguments);
+        this.setCenterX(point.x);
+        this.setCenterY(point.y);
+        return this;
+    },
+
+    getArea: function() {
+        return this.width * this.height;
+    },
+
+    isEmpty: function() {
+        return this.width === 0 || this.height === 0;
+    },
+
+    contains: function(arg) {
+        return arg && arg.width !== undefined
+        || (Array.isArray(arg) ? arg : arguments).length === 4
+            ? this._containsRectangle(Rectangle.read(arguments))
+            : this._containsPoint(Point.read(arguments));
+    },
+
+    _containsPoint: function(point) {
+        var x = point.x,
+            y = point.y;
+        return x >= this.x && y >= this.y
+            && x <= this.x + this.width
+            && y <= this.y + this.height;
+    },
+
+    _containsRectangle: function(rect) {
+        var x = rect.x,
+            y = rect.y;
+        return x >= this.x && y >= this.y
+            && x + rect.width <= this.x + this.width
+            && y + rect.height <= this.y + this.height;
+    },
+
+    intersects: function() {
+        var rect = Rectangle.read(arguments),
+            epsilon = Base.read(arguments) || 0;
+        return rect.x + rect.width > this.x - epsilon
+            && rect.y + rect.height > this.y - epsilon
+            && rect.x < this.x + this.width + epsilon
+            && rect.y < this.y + this.height + epsilon;
+    },
+
+    intersect: function() {
+        var rect = Rectangle.read(arguments),
+            x1 = Math.max(this.x, rect.x),
+            y1 = Math.max(this.y, rect.y),
+            x2 = Math.min(this.x + this.width, rect.x + rect.width),
+            y2 = Math.min(this.y + this.height, rect.y + rect.height);
+        return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+    },
+
+    unite: function() {
+        var rect = Rectangle.read(arguments),
+            x1 = Math.min(this.x, rect.x),
+            y1 = Math.min(this.y, rect.y),
+            x2 = Math.max(this.x + this.width, rect.x + rect.width),
+            y2 = Math.max(this.y + this.height, rect.y + rect.height);
+        return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+    },
+
+    include: function() {
+        var point = Point.read(arguments);
+        var x1 = Math.min(this.x, point.x),
+            y1 = Math.min(this.y, point.y),
+            x2 = Math.max(this.x + this.width, point.x),
+            y2 = Math.max(this.y + this.height, point.y);
+        return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+    },
+
+    expand: function() {
+        var amount = Size.read(arguments),
+            hor = amount.width,
+            ver = amount.height;
+        return new Rectangle(this.x - hor / 2, this.y - ver / 2,
+            this.width + hor, this.height + ver);
+    },
+
+    scale: function(hor, ver) {
+        return this.expand(this.width * hor - this.width,
+            this.height * (ver === undefined ? hor : ver) - this.height);
+    }
+}, Base.each([
+        ['Top', 'Left'], ['Top', 'Right'],
+        ['Bottom', 'Left'], ['Bottom', 'Right'],
+        ['Left', 'Center'], ['Top', 'Center'],
+        ['Right', 'Center'], ['Bottom', 'Center']
+    ],
+    function(parts, index) {
+        var part = parts.join(''),
+            xFirst = /^[RL]/.test(part);
+        if (index >= 4)
+            parts[1] += xFirst ? 'Y' : 'X';
+        var x = parts[xFirst ? 0 : 1],
+            y = parts[xFirst ? 1 : 0],
+            getX = 'get' + x,
+            getY = 'get' + y,
+            setX = 'set' + x,
+            setY = 'set' + y,
+            get = 'get' + part,
+            set = 'set' + part;
+        this[get] = function(_dontLink) {
+            var ctor = _dontLink ? Point : LinkedPoint;
+            return new ctor(this[getX](), this[getY](), this, set);
+        };
+        this[set] = function() {
+            var point = Point.read(arguments);
+            this[setX](point.x);
+            this[setY](point.y);
+        };
+    }, {
+        beans: true
+    }
+));
+
 var LinkedPoint = Point.extend({
 	initialize: function Point(x, y, owner, setter) {
 		this._x = x;
@@ -2199,360 +2552,6 @@ var LinkedSize = Size.extend({
 		this._owner[this._setter](this);
 	}
 });
-
-var Rectangle = Base.extend({
-	_class: 'Rectangle',
-	_readIndex: true,
-	beans: true,
-
-	initialize: function Rectangle(arg0, arg1, arg2, arg3) {
-		var args = arguments,
-			type = typeof arg0,
-			read;
-		if (type === 'number') {
-			this._set(arg0, arg1, arg2, arg3);
-			read = 4;
-		} else if (type === 'undefined' || arg0 === null) {
-			this._set(0, 0, 0, 0);
-			read = arg0 === null ? 1 : 0;
-		} else if (args.length === 1) {
-			if (Array.isArray(arg0)) {
-				this._set.apply(this, arg0);
-				read = 1;
-			} else if (arg0.x !== undefined || arg0.width !== undefined) {
-				this._set(arg0.x || 0, arg0.y || 0,
-						arg0.width || 0, arg0.height || 0);
-				read = 1;
-			} else if (arg0.from === undefined && arg0.to === undefined) {
-				this._set(0, 0, 0, 0);
-				if (Base.readSupported(args, this)) {
-					read = 1;
-				}
-			}
-		}
-		if (read === undefined) {
-			var frm = Point.readNamed(args, 'from'),
-				next = Base.peek(args),
-				x = frm.x,
-				y = frm.y,
-				width,
-				height;
-			if (next && next.x !== undefined || Base.hasNamed(args, 'to')) {
-				var to = Point.readNamed(args, 'to');
-				width = to.x - x;
-				height = to.y - y;
-				if (width < 0) {
-					x = to.x;
-					width = -width;
-				}
-				if (height < 0) {
-					y = to.y;
-					height = -height;
-				}
-			} else {
-				var size = Size.read(args);
-				width = size.width;
-				height = size.height;
-			}
-			this._set(x, y, width, height);
-			read = args.__index;
-		}
-		var filtered = args.__filtered;
-		if (filtered)
-			this.__filtered = filtered;
-		if (this.__read)
-			this.__read = read;
-		return this;
-	},
-
-	set: '#initialize',
-
-	_set: function(x, y, width, height) {
-		this.x = x;
-		this.y = y;
-		this.width = width;
-		this.height = height;
-		return this;
-	},
-
-	clone: function() {
-		return new Rectangle(this.x, this.y, this.width, this.height);
-	},
-
-	equals: function(rect) {
-		var rt = Base.isPlainValue(rect)
-				? Rectangle.read(arguments)
-				: rect;
-		return rt === this
-				|| rt && this.x === rt.x && this.y === rt.y
-					&& this.width === rt.width && this.height === rt.height
-				|| false;
-	},
-
-	toString: function() {
-		var f = Formatter.instance;
-		return '{ x: ' + f.number(this.x)
-				+ ', y: ' + f.number(this.y)
-				+ ', width: ' + f.number(this.width)
-				+ ', height: ' + f.number(this.height)
-				+ ' }';
-	},
-
-	_serialize: function(options) {
-		var f = options.formatter;
-		return [f.number(this.x),
-				f.number(this.y),
-				f.number(this.width),
-				f.number(this.height)];
-	},
-
-	getPoint: function(_dontLink) {
-		var ctor = _dontLink ? Point : LinkedPoint;
-		return new ctor(this.x, this.y, this, 'setPoint');
-	},
-
-	setPoint: function() {
-		var point = Point.read(arguments);
-		this.x = point.x;
-		this.y = point.y;
-	},
-
-	getSize: function(_dontLink) {
-		var ctor = _dontLink ? Size : LinkedSize;
-		return new ctor(this.width, this.height, this, 'setSize');
-	},
-
-	_fw: 1,
-	_fh: 1,
-
-	setSize: function() {
-		var size = Size.read(arguments),
-			sx = this._sx,
-			sy = this._sy,
-			w = size.width,
-			h = size.height;
-		if (sx) {
-			this.x += (this.width - w) * sx;
-		}
-		if (sy) {
-			this.y += (this.height - h) * sy;
-		}
-		this.width = w;
-		this.height = h;
-		this._fw = this._fh = 1;
-	},
-
-	getLeft: function() {
-		return this.x;
-	},
-
-	setLeft: function(left) {
-		if (!this._fw) {
-			var amount = left - this.x;
-			this.width -= this._sx === 0.5 ? amount * 2 : amount;
-		}
-		this.x = left;
-		this._sx = this._fw = 0;
-	},
-
-	getTop: function() {
-		return this.y;
-	},
-
-	setTop: function(top) {
-		if (!this._fh) {
-			var amount = top - this.y;
-			this.height -= this._sy === 0.5 ? amount * 2 : amount;
-		}
-		this.y = top;
-		this._sy = this._fh = 0;
-	},
-
-	getRight: function() {
-		return this.x + this.width;
-	},
-
-	setRight: function(right) {
-		if (!this._fw) {
-			var amount = right - this.x;
-			this.width = this._sx === 0.5 ? amount * 2 : amount;
-		}
-		this.x = right - this.width;
-		this._sx = 1;
-		this._fw = 0;
-	},
-
-	getBottom: function() {
-		return this.y + this.height;
-	},
-
-	setBottom: function(bottom) {
-		if (!this._fh) {
-			var amount = bottom - this.y;
-			this.height = this._sy === 0.5 ? amount * 2 : amount;
-		}
-		this.y = bottom - this.height;
-		this._sy = 1;
-		this._fh = 0;
-	},
-
-	getCenterX: function() {
-		return this.x + this.width / 2;
-	},
-
-	setCenterX: function(x) {
-		if (this._fw || this._sx === 0.5) {
-			this.x = x - this.width / 2;
-		} else {
-			if (this._sx) {
-				this.x += (x - this.x) * 2 * this._sx;
-			}
-			this.width = (x - this.x) * 2;
-		}
-		this._sx = 0.5;
-		this._fw = 0;
-	},
-
-	getCenterY: function() {
-		return this.y + this.height / 2;
-	},
-
-	setCenterY: function(y) {
-		if (this._fh || this._sy === 0.5) {
-			this.y = y - this.height / 2;
-		} else {
-			if (this._sy) {
-				this.y += (y - this.y) * 2 * this._sy;
-			}
-			this.height = (y - this.y) * 2;
-		}
-		this._sy = 0.5;
-		this._fh = 0;
-	},
-
-	getCenter: function(_dontLink) {
-		var ctor = _dontLink ? Point : LinkedPoint;
-		return new ctor(this.getCenterX(), this.getCenterY(), this, 'setCenter');
-	},
-
-	setCenter: function() {
-		var point = Point.read(arguments);
-		this.setCenterX(point.x);
-		this.setCenterY(point.y);
-		return this;
-	},
-
-	getArea: function() {
-		return this.width * this.height;
-	},
-
-	isEmpty: function() {
-		return this.width === 0 || this.height === 0;
-	},
-
-	contains: function(arg) {
-		return arg && arg.width !== undefined
-				|| (Array.isArray(arg) ? arg : arguments).length === 4
-				? this._containsRectangle(Rectangle.read(arguments))
-				: this._containsPoint(Point.read(arguments));
-	},
-
-	_containsPoint: function(point) {
-		var x = point.x,
-			y = point.y;
-		return x >= this.x && y >= this.y
-				&& x <= this.x + this.width
-				&& y <= this.y + this.height;
-	},
-
-	_containsRectangle: function(rect) {
-		var x = rect.x,
-			y = rect.y;
-		return x >= this.x && y >= this.y
-				&& x + rect.width <= this.x + this.width
-				&& y + rect.height <= this.y + this.height;
-	},
-
-	intersects: function() {
-		var rect = Rectangle.read(arguments),
-			epsilon = Base.read(arguments) || 0;
-		return rect.x + rect.width > this.x - epsilon
-				&& rect.y + rect.height > this.y - epsilon
-				&& rect.x < this.x + this.width + epsilon
-				&& rect.y < this.y + this.height + epsilon;
-	},
-
-	intersect: function() {
-		var rect = Rectangle.read(arguments),
-			x1 = Math.max(this.x, rect.x),
-			y1 = Math.max(this.y, rect.y),
-			x2 = Math.min(this.x + this.width, rect.x + rect.width),
-			y2 = Math.min(this.y + this.height, rect.y + rect.height);
-		return new Rectangle(x1, y1, x2 - x1, y2 - y1);
-	},
-
-	unite: function() {
-		var rect = Rectangle.read(arguments),
-			x1 = Math.min(this.x, rect.x),
-			y1 = Math.min(this.y, rect.y),
-			x2 = Math.max(this.x + this.width, rect.x + rect.width),
-			y2 = Math.max(this.y + this.height, rect.y + rect.height);
-		return new Rectangle(x1, y1, x2 - x1, y2 - y1);
-	},
-
-	include: function() {
-		var point = Point.read(arguments);
-		var x1 = Math.min(this.x, point.x),
-			y1 = Math.min(this.y, point.y),
-			x2 = Math.max(this.x + this.width, point.x),
-			y2 = Math.max(this.y + this.height, point.y);
-		return new Rectangle(x1, y1, x2 - x1, y2 - y1);
-	},
-
-	expand: function() {
-		var amount = Size.read(arguments),
-			hor = amount.width,
-			ver = amount.height;
-		return new Rectangle(this.x - hor / 2, this.y - ver / 2,
-				this.width + hor, this.height + ver);
-	},
-
-	scale: function(hor, ver) {
-		return this.expand(this.width * hor - this.width,
-				this.height * (ver === undefined ? hor : ver) - this.height);
-	}
-}, Base.each([
-		['Top', 'Left'], ['Top', 'Right'],
-		['Bottom', 'Left'], ['Bottom', 'Right'],
-		['Left', 'Center'], ['Top', 'Center'],
-		['Right', 'Center'], ['Bottom', 'Center']
-	],
-	function(parts, index) {
-		var part = parts.join(''),
-			xFirst = /^[RL]/.test(part);
-		if (index >= 4)
-			parts[1] += xFirst ? 'Y' : 'X';
-		var x = parts[xFirst ? 0 : 1],
-			y = parts[xFirst ? 1 : 0],
-			getX = 'get' + x,
-			getY = 'get' + y,
-			setX = 'set' + x,
-			setY = 'set' + y,
-			get = 'get' + part,
-			set = 'set' + part;
-		this[get] = function(_dontLink) {
-			var ctor = _dontLink ? Point : LinkedPoint;
-			return new ctor(this[getX](), this[getY](), this, set);
-		};
-		this[set] = function() {
-			var point = Point.read(arguments);
-			this[setX](point.x);
-			this[setY](point.y);
-		};
-	}, {
-		beans: true
-	}
-));
 
 var LinkedRectangle = Rectangle.extend({
 	initialize: function Rectangle(x, y, width, height, owner, setter) {
@@ -15708,3 +15707,5 @@ if (typeof define === 'function' && define.amd) {
 
 return paper;
 }.call(this, typeof self === 'object' ? self : null);
+
+export default paper;
