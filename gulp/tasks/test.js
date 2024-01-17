@@ -11,20 +11,11 @@
  */
 
 var gulp = require('gulp'),
-    qunits = require('gulp-qunits'),
-    webserver = require('gulp-webserver');
+    qunits = require('gulp-qunits');
 
-gulp.task('test', ['test:phantom', 'test:node']);
+gulp.task('test', ['test:node']);
 
-gulp.task('test:phantom', ['minify:acorn'], function() {
-    return gulp.src('index.html', { cwd: 'test' })
-        .pipe(qunits({
-            checkGlobals: true,
-            timeout: 40
-        }));
-});
-
-gulp.task('test:node', ['minify:acorn'], function(callback) {
+gulp.task('test:node', [], function(callback) {
     return gulp.src('load.js', { cwd: 'test' })
         .pipe(qunits({
             require: [
@@ -34,16 +25,8 @@ gulp.task('test:node', ['minify:acorn'], function(callback) {
                 // Note that loading dist/paper-full.js also works in
                 // combination with `gulp load`, in which case Prepro.js is
                 // present and handles the loading transparently.
-                { path: '../dist/paper-full.js', namespace: 'paper' }
+                { path: '../dist/paper-core.js', namespace: 'paper' }
             ],
             timeout: 40
         }));
 });
-
-gulp.task('test:browser', ['minify:acorn'], function() {
-    gulp.src('.')
-        .pipe(webserver({
-            open: '/test'
-        }));
-});
-

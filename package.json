@@ -25,8 +25,6 @@
     "load": "gulp load",
     "jshint": "gulp jshint",
     "test": "gulp test",
-    "test:browser": "gulp test:browser",
-    "test:phantom": "gulp test:phantom",
     "test:node": "gulp test:node"
   },
   "files": [
