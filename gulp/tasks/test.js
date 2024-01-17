@@ -22,6 +22,7 @@ gulp.task('test:node', [], function(callback) {
                 // To dynamically load the tests files from the sources, we need
                 // to require Prepro.js first.
                 'prepro/lib/node.js',
+                { path: '../test/domFix.js' },
                 // Note that loading dist/paper-full.js also works in
                 // combination with `gulp load`, in which case Prepro.js is
                 // present and handles the loading transparently.

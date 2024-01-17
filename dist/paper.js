@@ -32,10 +32,6 @@
 
 var paper = function(self, undefined) {
 
-self = self || require('./node/self.js');
-var window = self.window,
-	document = self.document;
-
 var Base = new function() {
 	var hidden = /^(statics|enumerable|beans|preserve)$/,
 		array = [],
@@ -15696,15 +15692,7 @@ var paper = new (PaperScope.inject(Base.exports, {
 	PlacedSymbol: SymbolItem
 }))();
 
-if (paper.agent.node) {
-	require('./node/extend.js')(paper);
-}
-
-if (typeof define === 'function' && define.amd) {
-	define('paper', paper);
-} else if (typeof module === 'object' && module) {
-	module.exports = paper;
-}
-
 return paper;
-}.call(this, typeof self === 'object' ? self : null);
+}.call(this, window);
+
+module.exports = paper;
