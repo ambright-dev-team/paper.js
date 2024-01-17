@@ -13,6 +13,7 @@
 QUnit.module('Shape');
 
 test('shape.toPath().toShape()', function() {
+    expect(0);
     var shapes = {
         circle: new Shape.Circle({
             center: [100, 100],

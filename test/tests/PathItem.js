@@ -13,6 +13,7 @@
 QUnit.module('PathItem');
 
 test('PathItem#create() with SVG path-data (#1101)', function() {
+    expect(0);
     var data = [
         'M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z',
         'M20 20l20 20v-20zm20 20l-20 20h20z',

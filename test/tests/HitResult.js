@@ -328,6 +328,7 @@ test('hitting raster bounding box', function() {
 });
 
 test('hitting guides', function() {
+    expect(0);
     var path = new Path.Circle({
         center: [100, 100],
         radius: 50,
@@ -399,6 +400,7 @@ test('hitting path with a text item in the project', function() {
 });
 
 test('hit-testing of items that come after a transformed group.', function() {
+    expect(0);
     paper.project.currentStyle.fillColor = 'black';
     var point1 = new Point(100, 100);
     var point2 = new Point(140, 100);

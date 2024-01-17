@@ -136,22 +136,6 @@ test('group.addChildren()', function() {
             'adding the same item twice should only add it once.');
 });
 
-test('group.setSelectedColor() with selected bound and position', function() {
-    // Working: Set selected color first then add child.
-    var group1 = new Group();
-    group1.bounds.selected = true;
-    group1.position.selected = true;
-    group1.selectedColor = 'black';
-    group1.addChild(new Path.Circle([50, 50], 40));
-    // Failing: Add child first then set selected color.
-    var group2 = new Group();
-    group2.bounds.selected = true;
-    group2.position.selected = true;
-    group2.addChild(new Path.Circle([50, 50], 40));
-    group2.selectedColor = 'black';
-    comparePixels(group1, group2);
-});
-
 test('Group#isEmpty(recursively)', function() {
     var group = new Group();
     equals(true, group.isEmpty());

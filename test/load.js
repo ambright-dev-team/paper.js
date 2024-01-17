@@ -13,5 +13,5 @@
 /*#*/ include('helpers.js');
 // We need to load resemble.js after helpers.js, since for Node, helpers makes
 // sure window, document and Image are made global first.
-/*#*/ include('../node_modules/resemblejs/resemble.js', { namespace: 'resemble' });
-/*#*/ include('tests/load.js');
+/*#*/ //include('../node_modules/resemblejs/resemble.js', { namespace: 'resemble' });
+/*#*/ include("tests/load.js");

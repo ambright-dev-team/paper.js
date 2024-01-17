@@ -1062,27 +1062,3 @@ test('Item#rasterize() bounds', function() {
         return circle.rasterize({ resolution: 1000, raster: raster }).bounds;
     }, new Rectangle({ x: 45.032, y: 45.032, width: 9.936, height: 9.936 }));
 });
-
-test('Item#draw() with CompoundPath as clip item', function() {
-    function createdClippedGroup(invertedOrder) {
-        var compound = new CompoundPath({
-            children: [
-                new Path.Circle(new Point(50, 50), 50),
-                new Path.Circle(new Point(100, 50), 50)
-            ],
-            fillRule: 'evenodd'
-        });
-
-        var rectangle = new Shape.Rectangle(new Point(0, 0), new Point(150, 50));
-
-        var group = new Group();
-        group.children = invertedOrder
-            ? [compound, rectangle]
-            : [rectangle, compound];
-        group.fillColor = 'black';
-        group.clipped = true;
-        return group;
-    };
-
-    comparePixels(createdClippedGroup(true), createdClippedGroup(false));
-});

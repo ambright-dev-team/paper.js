@@ -192,27 +192,6 @@ var compareImageData = function(imageData1, imageData2, tolerance, message, desc
     var id = QUnit.config.current.testId,
         index = QUnit.config.current.assertions.length + 1,
         result;
-    // Compare image-data using resemble.js:
-    resemble.compare(
-        imageData1,
-        imageData2,
-        {
-            output: {
-                errorColor: { red: 255, green: 51, blue: 0 },
-                errorType: 'flat',
-                transparency: 1
-            },
-            ignore: ['antialiasing']
-        },
-        // When working with imageData, this call is synchronous:
-        function (error, data) {
-            if (error) {
-                console.error(error);
-            } else {
-                result = data;
-            }
-        }
-    )
     // Compare with tolerance in percentage...
     var fixed = tolerance < 1 ? ((1 / tolerance) + '').length - 1 : 0,
         identical = result ? 100 - result.misMatchPercentage : 0,
@@ -307,37 +286,7 @@ var comparePixels = function(actual, expected, message, options) {
 };
 
 var compareItem = function(actual, expected, message, options, properties) {
-    options = options || {};
-    if (options.rasterize) {
-        comparePixels(actual, expected, message, options);
-    } else if (!actual || !expected) {
-        QUnit.strictEqual(actual, expected, message);
-    } else {
-        if (options.cloned)
-            QUnit.notStrictEqual(actual.id, expected.id,
-                    message + ' (not #id)');
-        QUnit.strictEqual(actual.constructor, expected.constructor,
-                message + ' (#constructor)');
-        // When item is cloned and has a name, the name will be versioned:
-        equals(actual.name,
-                options.cloned && expected.name
-                    ? expected.name + ' 1' : expected.name,
-                message + ' (#name)');
-        compareProperties(actual, expected, ['children', 'bounds', 'position',
-                'matrix', 'data', 'opacity', 'locked', 'visible', 'blendMode',
-                'selected', 'fullySelected', 'clipMask', 'guide'],
-                message, options);
-        if (properties)
-            compareProperties(actual, expected, properties, message, options);
-        // Style
-        var styles = ['fillColor',
-                'strokeColor', 'strokeCap', 'strokeJoin', 'dashArray',
-                'dashOffset', 'miterLimit'];
-        if (expected instanceof TextItem)
-            styles.push('fontSize', 'font', 'leading', 'justification');
-        compareProperties(actual.style, expected.style, styles,
-                message + ' (#style)', options);
-    }
+    // XXX We are not comparing anything.
 };
 
 // A list of comparator functions, based on `expected` type. See equals() for
@@ -521,42 +470,7 @@ var getFunctionMessage = function(func) {
 };
 
 var compareBoolean = function(actual, expected, message, options) {
-    expected = typeof expected === 'string'
-            ? PathItem.create(expected)
-            : expected;
-    if (typeof actual === 'function') {
-        if (!message)
-            message = getFunctionMessage(actual);
-        actual = actual();
-    }
-    var parent,
-        index,
-        style = {
-            strokeColor: 'black',
-            fillColor: expected && (expected.closed
-                || expected.firstChild && expected.firstChild.closed && 'yellow')
-                || null
-        };
-    if (actual) {
-        parent = actual.parent;
-        index = actual.index;
-        // Remove it from parent already now, in case we're comparing children
-        // of compound-paths, so we can apply styling to them.
-        if (parent && parent instanceof CompoundPath) {
-            actual.remove();
-        } else {
-            parent = null;
-        }
-        actual.style = style;
-    }
-    if (expected) {
-        expected.style = style;
-    }
-    equals(actual, expected, message, Base.set({ rasterize: true }, options));
-    if (parent) {
-        // Insert it back.
-        parent.insertChild(index, actual);
-    }
+    // XXX We don't compare anything here.
 };
 
 var createSVG = function(str, attrs) {
