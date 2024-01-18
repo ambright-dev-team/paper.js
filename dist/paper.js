@@ -31,9 +31,10 @@
  */
 
 // From the original self.js in src/node.
+// Any version can be used here.
 var self = {
 	navigator: {
-			userAgent: 'Node.js (' + process.platform + '; U; rv:' + process.version + ')'
+			userAgent: 'Node.js (generic; U; rv:v21.5.0)'
 	}
 };
 
