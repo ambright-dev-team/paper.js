@@ -30,6 +30,13 @@
  *
  */
 
+// From the original self.js in src/node.
+var self = {
+	navigator: {
+			userAgent: 'Node.js (' + process.platform + '; U; rv:' + process.version + ')'
+	}
+};
+
 var paper = function(self, undefined) {
 
 var Base = new function() {
@@ -11710,26 +11717,8 @@ var Color = Base.extend(new function() {
 			}
 		} else {
 			var color = namedColors[string];
-			if (!color) {
-				if (window) {
-					if (!colorCtx) {
-						colorCtx = CanvasProvider.getContext(1, 1, {
-							willReadFrequently: true
-						});
-						colorCtx.globalCompositeOperation = 'copy';
-					}
-					colorCtx.fillStyle = 'rgba(0,0,0,0)';
-					colorCtx.fillStyle = string;
-					colorCtx.fillRect(0, 0, 1, 1);
-					var data = colorCtx.getImageData(0, 0, 1, 1).data;
-					color = namedColors[string] = [
-						data[0] / 255,
-						data[1] / 255,
-						data[2] / 255
-					];
-				} else {
-					color = [0, 0, 0];
-				}
+			if (!color) {				
+				color = [0, 0, 0];
 			}
 			components = color.slice();
 		}
@@ -12830,7 +12819,6 @@ var View = Base.extend(Emitter, {
 		if (project._view === this)
 			project._view = null;
 		DomEvent.remove(this._element, this._viewEvents);
-		DomEvent.remove(window, this._windowEvents);
 		this._element = this._project = null;
 		this.off('frame');
 		this._animate = false;
@@ -13117,439 +13105,11 @@ var View = Base.extend(Emitter, {
 		create: function(project, element) {
 			if (document && typeof element === 'string')
 				element = document.getElementById(element);
-			var ctor = window ? CanvasView : View;
-			return new ctor(project, element);
+			return new View(project, element);
 		}
 	}
 },
-new function() {
-	if (!window)
-		return;
-	var prevFocus,
-		tempFocus,
-		dragging = false,
-		mouseDown = false;
-
-	function getView(event) {
-		var target = DomEvent.getTarget(event);
-		return target.getAttribute && View._viewsById[
-				target.getAttribute('id')];
-	}
-
-	function updateFocus() {
-		var view = View._focused;
-		if (!view || !view.isVisible()) {
-			for (var i = 0, l = View._views.length; i < l; i++) {
-				if ((view = View._views[i]).isVisible()) {
-					View._focused = tempFocus = view;
-					break;
-				}
-			}
-		}
-	}
-
-	function handleMouseMove(view, event, point) {
-		view._handleMouseEvent('mousemove', event, point);
-	}
-
-	var navigator = window.navigator,
-		mousedown, mousemove, mouseup;
-	if (navigator.pointerEnabled || navigator.msPointerEnabled) {
-		mousedown = 'pointerdown MSPointerDown';
-		mousemove = 'pointermove MSPointerMove';
-		mouseup = 'pointerup pointercancel MSPointerUp MSPointerCancel';
-	} else {
-		mousedown = 'touchstart';
-		mousemove = 'touchmove';
-		mouseup = 'touchend touchcancel';
-		if (!('ontouchstart' in window && navigator.userAgent.match(
-				/mobile|tablet|ip(ad|hone|od)|android|silk/i))) {
-			mousedown += ' mousedown';
-			mousemove += ' mousemove';
-			mouseup += ' mouseup';
-		}
-	}
-
-	var viewEvents = {},
-		docEvents = {
-			mouseout: function(event) {
-				var view = View._focused,
-					target = DomEvent.getRelatedTarget(event);
-				if (view && (!target || target.nodeName === 'HTML')) {
-					var offset = DomEvent.getOffset(event, view._element),
-						x = offset.x,
-						abs = Math.abs,
-						ax = abs(x),
-						max = 1 << 25,
-						diff = ax - max;
-					offset.x = abs(diff) < ax ? diff * (x < 0 ? -1 : 1) : x;
-					handleMouseMove(view, event, view.viewToProject(offset));
-				}
-			},
-
-			scroll: updateFocus
-		};
-
-	viewEvents[mousedown] = function(event) {
-		var view = View._focused = getView(event);
-		if (!dragging) {
-			dragging = true;
-			view._handleMouseEvent('mousedown', event);
-		}
-	};
-
-	docEvents[mousemove] = function(event) {
-		var view = View._focused;
-		if (!mouseDown) {
-			var target = getView(event);
-			if (target) {
-				if (view !== target) {
-					if (view)
-						handleMouseMove(view, event);
-					if (!prevFocus)
-						prevFocus = view;
-					view = View._focused = tempFocus = target;
-				}
-			} else if (tempFocus && tempFocus === view) {
-				if (prevFocus && !prevFocus.isInserted())
-					prevFocus = null;
-				view = View._focused = prevFocus;
-				prevFocus = null;
-				updateFocus();
-			}
-		}
-		if (view)
-			handleMouseMove(view, event);
-	};
-
-	docEvents[mousedown] = function() {
-		mouseDown = true;
-	};
-
-	docEvents[mouseup] = function(event) {
-		var view = View._focused;
-		if (view && dragging)
-			view._handleMouseEvent('mouseup', event);
-		mouseDown = dragging = false;
-	};
-
-	DomEvent.add(document, docEvents);
-
-	DomEvent.add(window, {
-		load: updateFocus
-	});
-
-	var called = false,
-		prevented = false,
-		fallbacks = {
-			doubleclick: 'click',
-			mousedrag: 'mousemove'
-		},
-		wasInView = false,
-		overView,
-		downPoint,
-		lastPoint,
-		downItem,
-		overItem,
-		dragItem,
-		clickItem,
-		clickTime,
-		dblClick;
-
-	function emitMouseEvent(obj, target, type, event, point, prevPoint,
-			stopItem) {
-		var stopped = false,
-			mouseEvent;
-
-		function emit(obj, type) {
-			if (obj.responds(type)) {
-				if (!mouseEvent) {
-					mouseEvent = new MouseEvent(type, event, point,
-							target || obj,
-							prevPoint ? point.subtract(prevPoint) : null);
-				}
-				if (obj.emit(type, mouseEvent)) {
-					called = true;
-					if (mouseEvent.prevented)
-						prevented = true;
-					if (mouseEvent.stopped)
-						return stopped = true;
-				}
-			} else {
-				var fallback = fallbacks[type];
-				if (fallback)
-					return emit(obj, fallback);
-			}
-		}
-
-		while (obj && obj !== stopItem) {
-			if (emit(obj, type))
-				break;
-			obj = obj._parent;
-		}
-		return stopped;
-	}
-
-	function emitMouseEvents(view, hitItem, type, event, point, prevPoint) {
-		view._project.removeOn(type);
-		prevented = called = false;
-		return (dragItem && emitMouseEvent(dragItem, null, type, event,
-					point, prevPoint)
-			|| hitItem && hitItem !== dragItem
-				&& !hitItem.isDescendant(dragItem)
-				&& emitMouseEvent(hitItem, null, type === 'mousedrag' ?
-					'mousemove' : type, event, point, prevPoint, dragItem)
-			|| emitMouseEvent(view, dragItem || hitItem || view, type, event,
-					point, prevPoint));
-	}
-
-	var itemEventsMap = {
-		mousedown: {
-			mousedown: 1,
-			mousedrag: 1,
-			click: 1,
-			doubleclick: 1
-		},
-		mouseup: {
-			mouseup: 1,
-			mousedrag: 1,
-			click: 1,
-			doubleclick: 1
-		},
-		mousemove: {
-			mousedrag: 1,
-			mousemove: 1,
-			mouseenter: 1,
-			mouseleave: 1
-		}
-	};
-
-	return {
-		_viewEvents: viewEvents,
-
-		_handleMouseEvent: function(type, event, point) {
-			var itemEvents = this._itemEvents,
-				hitItems = itemEvents.native[type],
-				nativeMove = type === 'mousemove',
-				tool = this._scope.tool,
-				view = this;
-
-			function responds(type) {
-				return itemEvents.virtual[type] || view.responds(type)
-						|| tool && tool.responds(type);
-			}
-
-			if (nativeMove && dragging && responds('mousedrag'))
-				type = 'mousedrag';
-			if (!point)
-				point = this.getEventPoint(event);
-
-			var inView = this.getBounds().contains(point),
-				hit = hitItems && inView && view._project.hitTest(point, {
-					tolerance: 0,
-					fill: true,
-					stroke: true
-				}),
-				hitItem = hit && hit.item || null,
-				handle = false,
-				mouse = {};
-			mouse[type.substr(5)] = true;
-
-			if (hitItems && hitItem !== overItem) {
-				if (overItem) {
-					emitMouseEvent(overItem, null, 'mouseleave', event, point);
-				}
-				if (hitItem) {
-					emitMouseEvent(hitItem, null, 'mouseenter', event, point);
-				}
-				overItem = hitItem;
-			}
-			if (wasInView ^ inView) {
-				emitMouseEvent(this, null, inView ? 'mouseenter' : 'mouseleave',
-						event, point);
-				overView = inView ? this : null;
-				handle = true;
-			}
-			if ((inView || mouse.drag) && !point.equals(lastPoint)) {
-				emitMouseEvents(this, hitItem, nativeMove ? type : 'mousemove',
-						event, point, lastPoint);
-				handle = true;
-			}
-			wasInView = inView;
-			if (mouse.down && inView || mouse.up && downPoint) {
-				emitMouseEvents(this, hitItem, type, event, point, downPoint);
-				if (mouse.down) {
-					dblClick = hitItem === clickItem
-						&& (Date.now() - clickTime < 300);
-					downItem = clickItem = hitItem;
-					if (!prevented && hitItem) {
-						var item = hitItem;
-						while (item && !item.responds('mousedrag'))
-							item = item._parent;
-						if (item)
-							dragItem = hitItem;
-					}
-					downPoint = point;
-				} else if (mouse.up) {
-					if (!prevented && hitItem === downItem) {
-						clickTime = Date.now();
-						emitMouseEvents(this, hitItem, dblClick ? 'doubleclick'
-								: 'click', event, point, downPoint);
-						dblClick = false;
-					}
-					downItem = dragItem = null;
-				}
-				wasInView = false;
-				handle = true;
-			}
-			lastPoint = point;
-			if (handle && tool) {
-				called = tool._handleMouseEvent(type, event, point, mouse)
-					|| called;
-			}
-
-			if (
-				event.cancelable !== false
-				&& (called && !mouse.move || mouse.down && responds('mouseup'))
-			) {
-				event.preventDefault();
-			}
-		},
-
-		_handleKeyEvent: function(type, event, key, character) {
-			var scope = this._scope,
-				tool = scope.tool,
-				keyEvent;
-
-			function emit(obj) {
-				if (obj.responds(type)) {
-					paper = scope;
-					obj.emit(type, keyEvent = keyEvent
-							|| new KeyEvent(type, event, key, character));
-				}
-			}
-
-			if (this.isVisible()) {
-				emit(this);
-				if (tool && tool.responds(type))
-					emit(tool);
-			}
-		},
-
-		_countItemEvent: function(type, sign) {
-			var itemEvents = this._itemEvents,
-				native = itemEvents.native,
-				virtual = itemEvents.virtual;
-			for (var key in itemEventsMap) {
-				native[key] = (native[key] || 0)
-						+ (itemEventsMap[key][type] || 0) * sign;
-			}
-			virtual[type] = (virtual[type] || 0) + sign;
-		},
-
-		statics: {
-			updateFocus: updateFocus,
-
-			_resetState: function() {
-				dragging = mouseDown = called = wasInView = false;
-				prevFocus = tempFocus = overView = downPoint = lastPoint =
-					downItem = overItem = dragItem = clickItem = clickTime =
-					dblClick = null;
-			}
-		}
-	};
-});
-
-var CanvasView = View.extend({
-	_class: 'CanvasView',
-
-	initialize: function CanvasView(project, canvas) {
-		if (!(canvas instanceof window.HTMLCanvasElement)) {
-			var size = Size.read(arguments, 1);
-			if (size.isZero())
-				throw new Error(
-						'Cannot create CanvasView with the provided argument: '
-						+ Base.slice(arguments, 1));
-			canvas = CanvasProvider.getCanvas(size);
-		}
-		var ctx = this._context = canvas.getContext('2d');
-		ctx.save();
-		this._pixelRatio = 1;
-		if (!/^off|false$/.test(PaperScope.getAttribute(canvas, 'hidpi'))) {
-			var deviceRatio = window.devicePixelRatio || 1,
-				backingStoreRatio = DomElement.getPrefixed(ctx,
-						'backingStorePixelRatio') || 1;
-			this._pixelRatio = deviceRatio / backingStoreRatio;
-		}
-		View.call(this, project, canvas);
-		this._needsUpdate = true;
-	},
-
-	remove: function remove() {
-		this._context.restore();
-		return remove.base.call(this);
-	},
-
-	_setElementSize: function _setElementSize(width, height) {
-		var pixelRatio = this._pixelRatio;
-		_setElementSize.base.call(this, width * pixelRatio, height * pixelRatio);
-		if (pixelRatio !== 1) {
-			var element = this._element,
-				ctx = this._context;
-			if (!PaperScope.hasAttribute(element, 'resize')) {
-				var style = element.style;
-				style.width = width + 'px';
-				style.height = height + 'px';
-			}
-			ctx.restore();
-			ctx.save();
-			ctx.scale(pixelRatio, pixelRatio);
-		}
-	},
-
-	getContext: function() {
-		return this._context;
-	},
-
-	getPixelSize: function getPixelSize(size) {
-		var agent = paper.agent,
-			pixels;
-		if (agent && agent.firefox) {
-			pixels = getPixelSize.base.call(this, size);
-		} else {
-			var ctx = this._context,
-				prevFont = ctx.font;
-			ctx.font = size + ' serif';
-			pixels = parseFloat(ctx.font);
-			ctx.font = prevFont;
-		}
-		return pixels;
-	},
-
-	getTextWidth: function(font, lines) {
-		var ctx = this._context,
-			prevFont = ctx.font,
-			width = 0;
-		ctx.font = font;
-		for (var i = 0, l = lines.length; i < l; i++)
-			width = Math.max(width, ctx.measureText(lines[i]).width);
-		ctx.font = prevFont;
-		return width;
-	},
-
-	update: function() {
-		if (!this._needsUpdate)
-			return false;
-		var project = this._project,
-			ctx = this._context,
-			size = this._viewSize;
-		ctx.clearRect(0, 0, size.width + 1, size.height + 1);
-		if (project)
-			project.draw(ctx, this._matrix, this._pixelRatio);
-		this._needsUpdate = false;
-		return true;
-	}
-});
+new function() {});
 
 var Event = Base.extend({
 	_class: 'Event',
@@ -13726,13 +13286,6 @@ var Key = new function() {
 		keyup: function(event) {
 			var key = getKey(event);
 			if (key in charMap)
-				handleKey(false, key, charMap[key], event);
-		}
-	});
-
-	DomEvent.add(window, {
-		blur: function(event) {
-			for (var key in charMap)
 				handleKey(false, key, charMap[key], event);
 		}
 	});
@@ -14246,34 +13799,7 @@ var CanvasProvider = Base.exports.CanvasProvider = {
 	canvases: [],
 
 	getCanvas: function(width, height, options) {
-		if (!window)
-			return null;
-		var canvas,
-			clear = true;
-		if (typeof width === 'object') {
-			height = width.height;
-			width = width.width;
-		}
-		if (this.canvases.length) {
-			canvas = this.canvases.pop();
-		} else {
-			canvas = document.createElement('canvas');
-			clear = false;
-		}
-		var ctx = canvas.getContext('2d', options || {});
-		if (!ctx) {
-			throw new Error('Canvas ' + canvas +
-					' is unable to provide a 2D context.');
-		}
-		if (canvas.width === width && canvas.height === height) {
-			if (clear)
-				ctx.clearRect(0, 0, width + 1, height + 1);
-		} else {
-			canvas.width = width;
-			canvas.height = height;
-		}
-		ctx.save();
-		return canvas;
+		return null;
 	},
 
 	getContext: function(width, height, options) {
@@ -15431,9 +14957,7 @@ new function() {
 	function getDefinition(value) {
 		var match = value && value.match(/\((?:["'#]*)([^"')]+)/),
 			name = match && match[1],
-			res = name && definitions[window
-					? name.replace(window.location.href.split('#')[0] + '#', '')
-					: name];
+			res = name && definitions[name];
 		if (res && res._scaleToBounds) {
 			res = res.clone();
 			res._scaleToBounds = true;
@@ -15591,12 +15115,11 @@ var paper = new (PaperScope.inject(Base.exports, {
 	DomEvent: DomEvent,
 	DomElement: DomElement,
 	document: document,
-	window: window,
 	Symbol: SymbolDefinition,
 	PlacedSymbol: SymbolItem
 }))();
 
 return paper;
-}.call(this, window);
+}.call(this, self);
 
 module.exports = paper;
