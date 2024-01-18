@@ -12794,35 +12794,6 @@ var DomEvent = {
 	}
 };
 
-DomEvent.requestAnimationFrame = new function() {
-	var nativeRequest = DomElement.getPrefixed(window, 'requestAnimationFrame'),
-		requested = false,
-		callbacks = [],
-		timer;
-
-	function handleCallbacks() {
-		var functions = callbacks;
-		callbacks = [];
-		for (var i = 0, l = functions.length; i < l; i++)
-			functions[i]();
-		requested = nativeRequest && callbacks.length;
-		if (requested)
-			nativeRequest(handleCallbacks);
-	}
-
-	return function(callback) {
-		callbacks.push(callback);
-		if (nativeRequest) {
-			if (!requested) {
-				nativeRequest(handleCallbacks);
-				requested = true;
-			}
-		} else if (!timer) {
-			timer = setInterval(handleCallbacks, 1000 / 60);
-		}
-	};
-};
-
 var View = Base.extend(Emitter, {
 	_class: 'View',
 
@@ -12906,24 +12877,8 @@ var View = Base.extend(Emitter, {
 	},
 
 	requestUpdate: function() {
-		if (!this._requested) {
-			var that = this;
-			DomEvent.requestAnimationFrame(function() {
-				that._requested = false;
-				if (that._animate) {
-					that.requestUpdate();
-					var element = that._element;
-					if ((!DomElement.getPrefixed(document, 'hidden')
-							|| PaperScope.getAttribute(element, 'keepalive')
-								=== 'true') && DomElement.isInView(element)) {
-						that._handleFrame();
-					}
-				}
-				if (that._autoUpdate)
-					that.update();
-			});
-			this._requested = true;
-		}
+		// Removal of window references: no updates to view (LS has no view
+		// concept of Paper).
 	},
 
 	play: function() {
