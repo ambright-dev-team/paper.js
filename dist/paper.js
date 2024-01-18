@@ -40,6 +40,8 @@ var self = {
 
 var paper = function(self, undefined) {
 
+var document = undefined;
+
 var Base = new function() {
 	var hidden = /^(statics|enumerable|beans|preserve)$/,
 		array = [],
@@ -12575,8 +12577,6 @@ var View = Base.extend(Emitter, {
 		_id: 0,
 
 		create: function(project, element) {
-			if (document && typeof element === 'string')
-				element = document.getElementById(element);
 			return new View(project, element);
 		}
 	}
@@ -14150,7 +14150,7 @@ var paper = new (PaperScope.inject(Base.exports, {
 	Base: Base,
 	Numerical: Numerical,
 	DomElement: DomElement,
-	document: undefined,
+	document: document,
 	Symbol: SymbolDefinition,
 	PlacedSymbol: SymbolItem
 }))();
