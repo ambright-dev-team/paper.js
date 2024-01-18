@@ -12827,64 +12827,13 @@ var View = Base.extend(Emitter, {
 	_class: 'View',
 
 	initialize: function View(project, element) {
-
-		function getSize(name) {
-			return element[name] || parseInt(element.getAttribute(name), 10);
-		}
-
-		function getCanvasSize() {
-			var size = DomElement.getSize(element);
-			return size.isNaN() || size.isZero()
-					? new Size(getSize('width'), getSize('height'))
-					: size;
-		}
-
 		var size;
-		if (window && element) {
-			this._id = element.getAttribute('id');
-			if (this._id == null)
-				element.setAttribute('id', this._id = 'paper-view-' + View._id++);
-			DomEvent.add(element, this._viewEvents);
-			var none = 'none';
-			DomElement.setPrefixed(element.style, {
-				userDrag: none,
-				userSelect: none,
-				touchCallout: none,
-				contentZooming: none,
-				tapHighlightColor: 'rgba(0,0,0,0)'
-			});
-
-			if (PaperScope.hasAttribute(element, 'resize')) {
-				var that = this;
-				DomEvent.add(window, this._windowEvents = {
-					resize: function() {
-						that.setViewSize(getCanvasSize());
-					}
-				});
-			}
-
-			size = getCanvasSize();
-
-			if (PaperScope.hasAttribute(element, 'stats')
-					&& typeof Stats !== 'undefined') {
-				this._stats = new Stats();
-				var stats = this._stats.domElement,
-					style = stats.style,
-					offset = DomElement.getOffset(element);
-				style.position = 'absolute';
-				style.left = offset.x + 'px';
-				style.top = offset.y + 'px';
-				document.body.appendChild(stats);
-			}
-		} else {
-			size = new Size(element);
-			element = null;
-		}
+		size = new Size(element);
+		element = null;
 		this._project = project;
 		this._scope = project._scope;
 		this._element = element;
-		if (!this._pixelRatio)
-			this._pixelRatio = window && window.devicePixelRatio || 1;
+		this._pixelRatio = 1;
 		this._setElementSize(size.width, size.height);
 		this._viewSize = size;
 		View._views.push(this);
@@ -12895,7 +12844,7 @@ var View = Base.extend(Emitter, {
 		this._frameItems = {};
 		this._frameItemCount = 0;
 		this._itemEvents = { native: {}, virtual: {} };
-		this._autoUpdate = !paper.agent.node;
+		this._autoUpdate = false;
 		this._needsUpdate = false;
 	},
 
