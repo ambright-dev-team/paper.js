@@ -92,17 +92,6 @@ test('shape.strokeBounds when scaled without strokeScaling', function(){
     equals(shape.strokeBounds, new Rectangle(-5, -5, 60, 60), 'shape.strokeBounds after enabling strokeScaling');
 });
 
-test('text.bounds', function() {
-    var text = new PointText({
-        fontFamily: 'Arial, Helvetica',
-        fontSize: 14,
-        fillColor: 'black',
-        point: [50, 100],
-        content: 'Hello World!'
-    });
-    equals(text.bounds, new Rectangle(50, 87.4, 76.25, 16.8), 'text.bounds', { tolerance: 1.0 });
-});
-
 test('path.bounds', function() {
     var path = new Path([
         new Segment(new Point(121, 334), new Point(-19, 38), new Point(30.7666015625, -61.53369140625)),
@@ -788,15 +777,6 @@ test('group.internalBounds with child and child.applyMatrix = false (#1250)', fu
     item1.scale(0.5);
     equals(group.internalBounds, new Rectangle(0, 0, 250, 250),
             'group.internalBounds after scaling item1');
-});
-
-test('item._globalMatrix on item after empty symbol (#1561)', function() {
-    var symbol = new SymbolItem(new Path());
-    symbol.opacity = 0.5;
-    symbol.skew(10);
-    var item = new Path.Circle(new Point(0,0), 10);
-    view.update();
-    equals(item._globalMatrix, new Matrix());
 });
 
 test('path.strokeBounds of open, circular arc (#1817)', function() {

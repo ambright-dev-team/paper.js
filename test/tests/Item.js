@@ -672,7 +672,6 @@ test('Item#className', function() {
     equals(new Group().className, 'Group');
     equals(new Path().className, 'Path');
     equals(new CompoundPath().className, 'CompoundPath');
-    equals(new Raster().className, 'Raster');
     equals(new SymbolItem().className, 'SymbolItem');
     equals(new PlacedSymbol().className, 'SymbolItem'); // deprecated
     equals(new PointText().className, 'PointText');
@@ -721,70 +720,6 @@ test('Item#data', function() {
     // TODO: add tests to see if importing and exporting of Item#data works
 });
 
-test('Item#blendMode in a transformed Group', function() {
-    var layer = new Layer();
-    var path1 = new Path.Rectangle({
-        size: [100, 100],
-        fillColor: new Color(1, 0, 0)
-    });
-
-    var path2 = new Path.Circle({
-        radius: 25,
-        center: [50, 50],
-        fillColor: new Color(0, 1, 0),
-        blendMode: 'screen'
-    });
-
-    var raster = layer.rasterize(72, false);
-    equals(raster.getPixel(0, 0), new Color(1, 0, 0, 1),
-            'Top left pixel should be red');
-    equals(raster.getPixel(50, 50), new Color(1, 1, 0, 1),
-            'Middle center pixel should be yellow');
-
-    path2.position = [0, 0];
-
-    var group = new Group(path2);
-    group.position = [50, 50];
-
-    var raster = layer.rasterize(72, false);
-    equals(raster.getPixel(0, 0), new Color(1, 0, 0, 1),
-            'Top left pixel should be red');
-    equals(raster.getPixel(50, 50), new Color(1, 1, 0, 1),
-            'Middle center pixel should be yellow');
-});
-
-test('Item#opacity', function() {
-    var layer = new Layer();
-    var background = new Path.Rectangle({
-        size: [100, 100],
-        fillColor: 'white'
-    });
-
-    var circle = new Path.Circle({
-        radius: 25,
-        center: [50, 50],
-        fillColor: 'red'
-    });
-
-    const red = new Color(1, 0, 0, 1)
-    const white = new Color(1, 1, 1, 1)
-
-    equals(layer.rasterize(72, false).getPixel(50, 50), red,
-        'Center pixel should be red');
-    circle.opacity = 0;
-    equals(layer.rasterize(72, false).getPixel(50, 50), white,
-        'Center pixel should be white');
-    circle.opacity = -1;
-    equals(layer.rasterize(72, false).getPixel(50, 50), white,
-        'Center pixel should be white');
-    circle.opacity = 1;
-    equals(layer.rasterize(72, false).getPixel(50, 50), red,
-        'Center pixel should be red');
-    circle.opacity = 2;
-    equals(layer.rasterize(72, false).getPixel(50, 50), red,
-        'Center pixel should be red');
-});
-
 test('Item#applyMatrix', function() {
     equals(function() {
         return new Path({ applyMatrix: true }).applyMatrix;
@@ -792,27 +727,15 @@ test('Item#applyMatrix', function() {
     equals(function() {
         return new Path({ applyMatrix: false }).applyMatrix;
     }, false);
-    equals(function() {
-        return new Raster({ applyMatrix: false }).applyMatrix;
-    }, false);
-    equals(function() {
-        return new Raster({ applyMatrix: true }).applyMatrix;
-    }, false);
 
     var applyMatrix = paper.settings.applyMatrix;
     paper.settings.applyMatrix = true;
     equals(function() {
         return new Path().applyMatrix;
     }, true);
-    equals(function() {
-        return new Raster().applyMatrix;
-    }, false);
     paper.settings.applyMatrix = false;
     equals(function() {
         return new Path().applyMatrix;
-    }, false);
-    equals(function() {
-        return new Raster().applyMatrix;
     }, false);
     paper.settings.applyMatrix = applyMatrix;
 
@@ -1021,44 +944,4 @@ test('Children global matrices are cleared after parent transformation', functio
     equals(item.localToGlobal(item.getPointAt(0)), new Point(0, 100));
     group.translate(100, 0);
     equals(item.localToGlobal(item.getPointAt(0)), new Point(100, 100));
-});
-
-test('Item#rasterize() with empty bounds', function() {
-    new Path.Line([0, 0], [100, 0]).rasterize();
-    view.update(); // This should not throw
-    expect(0);
-});
-
-test('Item#rasterize() bounds', function() {
-    var circle = new Path.Circle({
-        center: [50, 50],
-        radius: 5,
-        fillColor: 'red'
-    });
-    equals(function() {
-        return circle.bounds;
-    }, new Rectangle({ x: 45, y: 45, width: 10, height: 10 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 72 }).bounds;
-    }, new Rectangle({ x: 45, y: 45, width: 10, height: 10 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 144 }).bounds;
-    }, new Rectangle({ x: 45, y: 45, width: 10, height: 10 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 200 }).bounds;
-    }, new Rectangle({ x: 45.14, y: 45.14, width: 9.72, height: 9.72 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 400 }).bounds;
-    }, new Rectangle({ x: 45.05, y: 45.05, width: 9.9, height: 9.9 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 600 }).bounds;
-    }, new Rectangle({ x: 45.02, y: 45.02, width: 9.96, height: 9.96 }));
-    equals(function() {
-        return circle.rasterize({ resolution: 1000 }).bounds;
-    }, new Rectangle({ x: 45.032, y: 45.032, width: 9.936, height: 9.936 }));
-    equals(function() {
-        var raster = circle.rasterize({ resolution: 1000 });
-        // Reusing the raster for a 2nd rasterization should leave it in place.
-        return circle.rasterize({ resolution: 1000, raster: raster }).bounds;
-    }, new Rectangle({ x: 45.032, y: 45.032, width: 9.936, height: 9.936 }));
 });

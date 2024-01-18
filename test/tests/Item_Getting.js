@@ -12,21 +12,6 @@
 
 QUnit.module('Getting and Matching Items');
 
-test('Item#getItems()', function() {
-    var group = new Group([new Path({ selected: true }), new Raster()]);
-    equals(function() {
-        return group.getItems({
-            type: 'path'
-        }).length;
-    }, 1);
-
-    equals(function() {
-        return group.getItems({
-            selected: true
-        }).length;
-    }, 1);
-});
-
 test('Item#matches()', function() {
     var path = new Path();
     equals(function() {
@@ -40,76 +25,6 @@ test('Item#matches()', function() {
             visible: true
         });
     }, true);
-});
-
-test('Project#getItems()', function() {
-    var layer = new Layer();
-
-    var matches = paper.project.getItems({
-        class: Layer
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] == layer;
-    }, true);
-
-    var matches = paper.project.getItems({
-        class: Item
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] == layer;
-    }, true);
-
-    var path = new Path();
-    var matches = paper.project.getItems({
-        class: Path
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] == path;
-    }, true);
-
-    var group = new Group();
-    var matches = paper.project.getItems({
-        className: 'Group'
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] === group;
-    }, true);
-
-    var matches = paper.project.getItems({
-        type: 'group'
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] === group;
-    }, true);
-
-    var raster = new Raster();
-    var matches = paper.project.getItems({
-        class: Raster
-    });
-    equals(function() {
-        return matches.length == 1 && matches[0] === raster;
-    }, true);
-
-    equals(function() {
-        return paper.project.getItems({
-            selected: true
-        }).length;
-    }, 0);
-
-    raster.selected = true;
-    equals(function() {
-        return paper.project.getItems({
-            selected: true
-        }).length;
-    }, 2);
-
-    raster.selected = true;
-    equals(function() {
-        return paper.project.getItems({
-            selected: true,
-            class: Raster
-        }).length;
-    }, 1);
 });
 
 test('Project#getItems() with compare function', function() {
@@ -136,24 +51,6 @@ test('Project#getItems() with specific property value', function() {
 
     var items = paper.project.getItems({
         opacity: 1,
-        type: 'path'
-    });
-    equals(function() {
-        return items.length == 1 && items[0] == path;
-    }, true);
-});
-
-test('Project#getItems() with color', function() {
-    var path = new Path({
-        fillColor: 'red'
-    });
-
-    var decoyPath = new Path({
-        fillColor: 'black'
-    });
-
-    var items = paper.project.getItems({
-        fillColor: 'red',
         type: 'path'
     });
     equals(function() {

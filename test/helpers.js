@@ -19,7 +19,7 @@ var isNodeContext = typeof global === 'object',
 if (isNodeContext) {
     scope = global;
     // Resemble.js needs the Image constructor global.
-    global.Image = paper.window.Image;
+    global.Image = window.Image;
 } else {
     scope = window;
     // This is only required when running in the browser:
@@ -76,9 +76,6 @@ var test = function(testName, expected) {
         // running the next test.
         if (currentProject) {
             currentProject.remove();
-            // This is needed for interactions tests, to make sure that test is
-            // run with a fresh state.
-            View._resetState();
         }
 
         // Instantiate project with 100x100 pixels canvas instead of default

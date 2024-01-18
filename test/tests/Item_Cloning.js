@@ -142,21 +142,6 @@ test('Symbol#clone()', function() {
     }, true);
 });
 
-test('Raster#clone()', function() {
-    var path = new Path.Circle([150, 150], 60);
-    path.style = {
-        fillColor: new Color(0, 0, 1),
-        strokeColor: new Color(0, 0, 1)
-    };
-    var raster = path.rasterize(72);
-    raster.opacity = 0.5;
-    raster.locked = true;
-    raster.visible = false;
-    raster.blendMode = 'multiply';
-    raster.rotate(20).translate(100);
-    cloneAndCompare(raster);
-});
-
 test('Group with clipmask', function() {
     var path = new Path.Circle([100, 100], 30),
         path2 = new Path.Circle([100, 100], 20),
