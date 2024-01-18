@@ -14154,6 +14154,10 @@ var paper = new (PaperScope.inject(Base.exports, {
 	PlacedSymbol: SymbolItem
 }))();
 
+// Paperfix ported from LS.
+paper.setup(new Size(1, 1));
+paper.view.autoUpdate = false;
+
 return paper;
 }.call(this, self);
 
