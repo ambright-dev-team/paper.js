@@ -14150,7 +14150,7 @@ var paper = new (PaperScope.inject(Base.exports, {
 	Base: Base,
 	Numerical: Numerical,
 	DomElement: DomElement,
-	document: document,
+	document: undefined,
 	Symbol: SymbolDefinition,
 	PlacedSymbol: SymbolItem
 }))();
